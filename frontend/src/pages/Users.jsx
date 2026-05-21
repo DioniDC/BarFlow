@@ -38,6 +38,13 @@ export default function Users() {
 
   async function save(e) {
     e.preventDefault();
+    if (!editingId) {
+      if (form.username.trim().length < 3) return alert('Usuário precisa de pelo menos 3 caracteres');
+      if (form.password.length < 4) return alert('Senha precisa de pelo menos 4 caracteres');
+      if (!form.name.trim()) return alert('Nome é obrigatório');
+    } else if (form.password && form.password.length < 4) {
+      return alert('Senha precisa de pelo menos 4 caracteres');
+    }
     try {
       if (editingId) {
         const data = { ...form };
@@ -50,7 +57,15 @@ export default function Users() {
       setOpen(false);
       load();
     } catch (err) {
-      alert(err.response?.data?.error || 'Erro');
+      const data = err.response?.data?.error;
+      let msg = 'Erro';
+      if (typeof data === 'string') msg = data;
+      else if (data?.fieldErrors) {
+        msg = Object.entries(data.fieldErrors)
+          .map(([k, v]) => `${k}: ${v.join(', ')}`)
+          .join('\n');
+      }
+      alert(msg);
     }
   }
 
@@ -132,6 +147,8 @@ export default function Users() {
             <input
               type="password"
               className="input"
+              required={!editingId}
+              minLength={4}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />

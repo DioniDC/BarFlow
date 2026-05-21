@@ -31,9 +31,14 @@ services:
       PORT: 4000
       SEED_ADMIN_USER: ${SEED_ADMIN_USER:-admin}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
-      NODE_ENV: production
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "4010:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: sh -c "npx prisma db push --skip-generate && node src/seed.js && node --watch src/index.js"
 
   frontend:
     build: ./frontend
@@ -43,8 +48,12 @@ services:
       - backend
     environment:
       VITE_API_URL: http://backend:4000
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5180:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   bar_pgdata:
