@@ -27,7 +27,7 @@ seed (cria admin, 10 mesas e alguns produtos de exemplo).
 
 ```
 .
-├── backend/                  # Node + Express + Prisma
+├── backend/                  # Node + Express + Prisma (teste)
 │   ├── prisma/schema.prisma  # modelos
 │   └── src/
 │       ├── index.js
