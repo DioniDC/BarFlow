@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  WAITER
+  CASHIER
+}
+
+enum TableType {
+  TABLE
+  TAB
+}
+
+enum TableStatus {
+  FREE
+  OCCUPIED
+  CLOSED
+}
+
+enum OrderItemStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+enum ReceivableStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum PaymentMethod {
+  CASH
+  CARD_CREDIT
+  CARD_DEBIT
+  PIX
+  ACCOUNT
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String
+  role      Role     @default(WAITER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems OrderItem[]
+  payments   Payment[]
+}
+
+model Product {
+  id           Int       @id @default(autoincrement())
+  internalCode Int       @unique
+  name         String
+  description  String?
+  price        Decimal   @db.Decimal(10, 2)
+  cost         Decimal?  @db.Decimal(10, 2)
+  stock        Decimal   @default(0) @db.Decimal(12, 3)
+  unit         String    @default("UN")
+  category     String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  barcodes      Barcode[]
+  orderItems    OrderItem[]
+  stockMoves    StockMovement[]
+}
+
+model Barcode {
+  id        Int     @id @default(autoincrement())
+  code      String  @unique
+  quantity  Decimal @default(1) @db.Decimal(10, 3)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  document  String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tables       Table[]
+  receivables  Receivable[]
+}
+
+model Table {
+  id          Int          @id @default(autoincrement())
+  number      String       @unique
+  label       String?
+  type        TableType    @default(TABLE)
+  status      TableStatus  @default(FREE)
+  customerId  Int?
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  customerName String?
+  notes       String?
+  openedAt    DateTime?
+  closedAt    DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  orderItems  OrderItem[]
+  payments    Payment[]
+
+  @@index([status])
+  @@index([type])
+}
+
+model OrderItem {
+  id         Int             @id @default(autoincrement())
+  tableId    Int
+  table      Table           @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product         @relation(fields: [productId], references: [id])
+  quantity   Decimal         @db.Decimal(10, 3)
+  unitPrice  Decimal         @db.Decimal(10, 2)
+  total      Decimal         @db.Decimal(10, 2)
+  notes      String?
+  userId     Int
+  user       User            @relation(fields: [userId], references: [id])
+  status     OrderItemStatus @default(PENDING)
+  createdAt  DateTime        @default(now())
+
+  @@index([tableId])
+}
+
+model Payment {
+  id        Int           @id @default(autoincrement())
+  tableId   Int
+  table     Table         @relation(fields: [tableId], references: [id])
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(10, 2)
+  userId    Int
+  user      User          @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+
+  @@index([tableId])
+}
+
+model Receivable {
+  id          Int              @id @default(autoincrement())
+  customerId  Int
+  customer    Customer         @relation(fields: [customerId], references: [id])
+  amount      Decimal          @db.Decimal(10, 2)
+  paid        Decimal          @default(0) @db.Decimal(10, 2)
+  description String?
+  dueDate     DateTime?
+  paidAt      DateTime?
+  status      ReceivableStatus @default(OPEN)
+  tableId     Int?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model StockMovement {
+  id        Int          @id @default(autoincrement())
+  productId Int
+  product   Product      @relation(fields: [productId], references: [id])
+  type      MovementType
+  quantity  Decimal      @db.Decimal(12, 3)
+  reason    String?
+  userId    Int?
+  createdAt DateTime     @default(now())
+
+  @@index([productId])
+}

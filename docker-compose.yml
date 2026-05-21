@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bar_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bar
+      POSTGRES_PASSWORD: bar
+      POSTGRES_DB: bardb
+    ports:
+      - "5435:5432"
+    volumes:
+      - bar_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bar -d bardb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: bar_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://bar:bar@db:5432/bardb?schema=public
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo}
+      JWT_EXPIRES_IN: 12h
+      PORT: 4000
+      SEED_ADMIN_USER: ${SEED_ADMIN_USER:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      NODE_ENV: production
+    ports:
+      - "4010:4000"
+
+  frontend:
+    build: ./frontend
+    container_name: bar_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://backend:4000
+    ports:
+      - "5180:5173"
+
+volumes:
+  bar_pgdata:
